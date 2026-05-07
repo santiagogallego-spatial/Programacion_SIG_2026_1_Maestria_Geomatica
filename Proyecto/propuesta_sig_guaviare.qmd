@@ -1,0 +1,471 @@
+---
+title: "Pérdida de Cobertura Vegetal y su Efecto en la Degradación de Suelos en Zonas de Expansión Agrícola en el Departamento del Guaviare, Colombia (2015–2024)"
+subtitle: "Propuesta de Proyecto Final — Programación SIG"
+author: "Santiago Gallego Soche"
+date: "15/04/2026"
+bibliography: references.bib
+lang: es
+nocite: |
+  @
+format:
+  html:
+    toc: true
+    toc-title: "Contenido"
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+    highlight-style: github
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+  pdf:
+    toc: true
+    toc-title: "Contenido"
+    number-sections: true
+    engine: pdflatex
+    colorlinks: true
+    geometry:
+      - top=25mm
+      - left=30mm
+      - right=25mm
+      - bottom=25mm
+    fontsize: 11pt
+    fontfamily: lmodern
+    header-includes: |
+      \usepackage{fancyhdr}
+      \pagestyle{fancy}
+      \fancyhead[R]{\small Maestría en Geomática — Programación SIG}
+      \fancyfoot[C]{\thepage}
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+# Paquetes necesarios para el documento
+# install.packages(c("sf", "terra", "tmap", "ggplot2", "knitr", "kableExtra"))
+library(knitr)
+library(kableExtra)
+```
+
+---
+
+> **Área de estudio:** Departamento del Guaviare, Colombia  
+> **Período de análisis:** 2015 – 2024  
+> **Lenguajes de programación:** Python · Julia · R  
+> **Asignatura:** Programación SIG
+
+---
+
+## Título del Proyecto
+
+**Pérdida de Cobertura Vegetal y su Efecto en la Degradación de Suelos en Zonas de Expansión Agrícola en el Departamento del Guaviare, Colombia (2015–2024): Un Enfoque Multilenguaje con Python, Julia y R.**
+
+---
+
+## Introducción y Justificación
+
+### Definición del problema
+
+El Guaviare constituye uno de los departamentos con mayor presión antrópica sobre la cobertura boscosa de la Amazonía colombiana. Según el Instituto de Hidrología, Meteorología y Estudios Ambientales (IDEAM, 2023), el departamento concentró aproximadamente el 12% de la deforestación nacional registrada entre 2016 y 2022, siendo la expansión de la frontera agrícola y la ganadería extensiva los principales motores de pérdida forestal. Esta dinámica no solo implica la eliminación de biomasa aérea y la liberación de carbono almacenado, sino que desencadena procesos de degradación edáfica que comprometen la productividad del suelo a largo plazo.
+
+La conversión de bosque a uso agropecuario supone la ruptura de los ciclos biogeoquímicos que sostienen la estructura del suelo tropical. La eliminación de la cubierta vegetal reduce la materia orgánica, incrementa la erosión hídrica, altera la biota edáfica y disminuye la capacidad de retención hídrica [@cochrane2009]. Estos efectos se manifiestan espacialmente en la modificación de índices espectrales de vegetación y en el deterioro progresivo de las propiedades físico-químicas del suelo, lo que resulta en una pérdida permanente de la aptitud productiva en paisajes de alta fragilidad ecológica.
+
+### Relevancia espacial y justificación del enfoque SIG
+
+El abordaje de esta problemática desde la geomática y la programación SIG es especialmente pertinente dado el carácter multitemporal, multifuente y multiescalar de los datos involucrados. La integración de imágenes satelitales de mediana y alta resolución (Landsat, Sentinel-2, MODIS), productos derivados de Google Earth Engine (GEE) y capas vectoriales de uso del suelo permite construir una narrativa espacial robusta que identifica no solo dónde ocurre la deforestación, sino cuáles son sus efectos sobre la calidad del suelo en el corto, mediano y largo plazo.
+
+Desde el punto de vista profesional, el desarrollo de flujos de trabajo reproducibles en Python, Julia y R representa una contribución metodológica de alto valor para consultorías ambientales, entidades gubernamentales como el MADS, la UPRA y el IGAC, así como para proyectos de compensación de carbono bajo estándares REDD+ y Verra VCS. La combinación de teledetección, geoestadística y visualización avanzada en un mismo pipeline constituye una competencia diferencial en el mercado de la consultoría ambiental en Colombia.
+
+---
+
+## Estado del Arte / Revisión Bibliográfica Preliminar {#sec-estadoarte}
+
+### Monitoreo de deforestación con programación y SIG
+
+La detección de cambios en cobertura boscosa mediante teledetección ha evolucionado significativamente con el acceso a plataformas de computación en la nube. @hansen2013 desarrollaron el primer mapa global de pérdida y ganancia forestal a 30 m de resolución usando Landsat, sentando las bases de los productos de cobertura que hoy sirven como referencia mundial. En Colombia, el IDEAM implementa el Sistema de Monitoreo de Bosques y Carbono (SMBYC) integrando estas metodologías con datos nacionales.
+
+Desde el enfoque de programación, la API de Google Earth Engine en Python [@gorelick2017] ha democratizado el acceso a series temporales densas de imágenes satelitales. Trabajos recientes como los de @bullock2020 han demostrado la eficiencia de algoritmos de detección de rupturas temporales (e.g., CCDC, BFAST) aplicados sobre colecciones Landsat y Sentinel-2 para identificar eventos de deforestación con precisión subpíxel.
+
+### Degradación de suelos y teledetección
+
+La estimación de la degradación del suelo a partir de índices espectrales ha sido ampliamente validada. El NDVI es el indicador más utilizado para aproximar la biomasa y la salud de la cobertura vegetal [@tucker1979], mientras que índices como el BSI (*Bare Soil Index*) y el MSAVI han demostrado sensibilidad ante procesos de erosión y pérdida de materia orgánica [@escadafal1994]. Estudios en la Amazonia brasileña [@nepstad2008] correlacionaron la disminución sostenida del NDVI con la compactación del suelo y la reducción de la infiltración hídrica.
+
+En Colombia, trabajos del CIAT han combinado datos de percepción remota con muestreos edáficos para construir modelos predictivos de degradación en zonas de frontera agrícola, destacando la necesidad de enfoques integrados que combinen múltiples fuentes de datos.
+
+### Uso de Julia en procesamiento geoespacial
+
+Aunque Python y R dominan el ecosistema de la ciencia de datos geoespaciales, Julia ha emergido como una alternativa de alto rendimiento para el procesamiento de raster densos y series temporales. El paquete `Rasters.jl` permite manipular grandes colecciones de datos multidimensionales con sintaxis expresiva y velocidad de ejecución cercana a C. Su uso en detección de cambios y álgebra raster intensiva representa una ventaja computacional significativa frente a implementaciones equivalentes en Python puro.
+
+---
+
+## Objetivos
+
+### Objetivo General
+
+Analizar la relación espacio-temporal entre la pérdida de cobertura vegetal y la degradación de suelos en zonas de expansión agrícola del departamento del Guaviare, Colombia, durante el período 2015–2024, mediante el desarrollo de un flujo de trabajo reproducible e integrado en Python, Julia y R.
+
+### Objetivos Específicos
+
+**OE1.** Cuantificar y cartografiar la pérdida de cobertura vegetal en el Guaviare entre 2015 y 2024 a partir de imágenes Landsat-8/9 y Sentinel-2, utilizando **Python** como lenguaje de descarga y preprocesamiento de datos en Google Earth Engine.
+
+**OE2.** Detectar y caracterizar patrones de degradación del suelo mediante el análisis multitemporal de índices espectrales (NDVI, BSI, MSAVI, NBR) utilizando **Julia** para el procesamiento eficiente de series de tiempo raster y la identificación de puntos de ruptura.
+
+**OE3.** Modelar espacialmente la relación entre la pérdida de cobertura y los indicadores de degradación edáfica mediante métodos geoestadísticos (kriging, semivariogramas) en **R**, y generar cartografía temática y visualizaciones analíticas como producto final del proyecto.
+
+---
+
+## Área de Estudio
+
+### Delimitación geográfica
+
+El área de estudio comprende el departamento del Guaviare, ubicado en la región de la Orinoquia-Amazonia colombiana, entre las coordenadas aproximadas 0°05'N – 2°50'N y 70°30'W – 74°50'W. Con una extensión de aproximadamente 53.460 km², el departamento limita al norte con el Meta y el Vichada, al este con el Guainía y el Vaupés, al sur con el Caquetá y el Vaupés, y al oeste con el Caquetá y el Meta.
+
+El territorio está conformado por tres grandes unidades fisiográficas: la llanura aluvial del río Guaviare y sus afluentes, las serranías del Chiribiquete y la Lindosa, y la zona de transición sabana-selva en el piedemonte oriental.
+
+### Mapa base del área de estudio
+
+
+![Texto alternativo para accesibilidad](mapa_guaviare_final_grilla.png)
+
+### Contexto socioambiental
+
+El Guaviare concentra una de las tasas de deforestación más altas de Colombia, impulsada principalmente por la ganadería extensiva, los cultivos ilícitos y la colonización espontánea post-acuerdo de paz. Los municipios de **San José del Guaviare**, **El Retorno** y **Calamar** son los de mayor presión antrópica sobre el bosque. La presencia del Parque Nacional Natural Serranía de Chiribiquete (Patrimonio de la Humanidad UNESCO) hace que la presión sobre las zonas de amortiguamiento sea especialmente relevante desde el punto de vista de la conservación.
+
+---
+
+## Fuentes de Datos
+
+```{r tabla-datos}
+datos <- data.frame(
+  Dataset = c(
+    "Landsat 8/9 SR (C2)",
+    "Sentinel-2 MSI L2A",
+    "MODIS Terra MOD13Q1",
+    "Hansen Global Forest Change v1.11",
+    "SMBYC — Deforestación Colombia",
+    "SoilGrids 2.0 (250 m)",
+    "SRTM DEM / Copernicus DEM",
+    "Límites político-administrativos",
+    "Catálogo de Ecosistemas 1:100.000",
+    "Datos climáticos ERA5"
+  ),
+  Fuente = c(
+    "GEE / USGS",
+    "GEE / ESA Copernicus",
+    "GEE / NASA LP DAAC",
+    "GEE / UMD",
+    "IDEAM (Open Data)",
+    "ISRIC World Soil Information",
+    "NASA / ESA (GEE)",
+    "IGAC — Geovisor Colombia",
+    "MADS / IDEAM",
+    "ECMWF / GEE"
+  ),
+  Uso = c(
+    "Índices espectrales multitemporales (NDVI, BSI, NBR) 2015–2024",
+    "Series de tiempo de alta resolución (10 m) para detección de cambios 2017–2024",
+    "NDVI/EVI cada 16 días a 250 m para tendencias de largo plazo",
+    "Capas de pérdida forestal anual 2015–2023 como referencia de validación",
+    "Polígonos oficiales de deforestación por núcleos activos en el Guaviare",
+    "Variables edáficas: SOC, textura, pH, BD — descarga vía API REST en Python",
+    "Modelo de elevación para análisis de pendientes y susceptibilidad erosiva",
+    "Capa departamental y municipal para acotación del área de estudio",
+    "Clasificación de ecosistemas terrestres como referencia de cobertura base",
+    "Temperatura, precipitación como variables de contexto en el modelo espacial"
+  )
+)
+
+kbl(datos, 
+    col.names = c("Dataset / API", "Fuente / Plataforma", "Uso en el proyecto"),
+    booktabs = TRUE,
+    caption = "Fuentes de datos utilizadas en el proyecto.") |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    latex_options = c("striped", "hold_position", "scale_down"),
+    full_width = TRUE,
+    font_size = 11
+  ) |>
+  column_spec(1, bold = TRUE, width = "5cm") |>
+  column_spec(2, width = "4cm") |>
+  column_spec(3, width = "7cm")
+```
+
+---
+
+## Metodología Propuesta
+
+La metodología se estructura en tres fases secuenciales y complementarias, cada una asociada a un lenguaje de programación específico según sus fortalezas técnicas.
+
+```{mermaid}
+flowchart LR
+    A["🐍 Python\nGEE API + rasterio"] --> B["📦 GeoTIFF Stacks\nNDVI · BSI · NBR · MSAVI"]
+    B --> C["⚡ Julia\nRasters.jl + BFAST"]
+    C --> D["📊 Slope Maps\nPuntos de ruptura · CSV"]
+    D --> E["📈 R\nterra + gstat + tmap"]
+    E --> F["🗺️ Productos finales\nKriging · Cartografía · Report"]
+
+    style A fill:#1F4E79,color:#fff
+    style C fill:#2E75B6,color:#fff
+    style E fill:#107C10,color:#fff
+    style B fill:#EBF3FB
+    style D fill:#EBF3FB
+    style F fill:#E8F5E9
+```
+
+### Fase 1: Descarga y preprocesamiento de datos (Python) {#sec-fase1}
+
+Python actuará como el lenguaje de orquestación y acceso a datos. Se utilizará la API de Google Earth Engine (`earthengine-api`) para la extracción de colecciones de imágenes Landsat y Sentinel-2, aplicando filtros por fecha, cobertura de nubes y área de interés.
+
+**Librerías principales:**
+
+| Librería | Función |
+|---|---|
+| `earthengine-api` / `geemap` | Acceso y exportación desde GEE |
+| `rasterio` | Lectura y escritura de rasters GeoTIFF |
+| `geopandas` / `shapely` | Gestión de capas vectoriales |
+| `requests` | Descarga API REST (SoilGrids) |
+| `pandas` / `numpy` | Procesamiento tabular y numérico |
+| `matplotlib` | Visualizaciones exploratorias |
+
+: Librerías Python utilizadas en la Fase 1 {#tbl-python}
+
+**Ejemplo de código — Descarga de NDVI desde GEE:**
+
+```python
+import ee
+import geemap
+
+# Autenticación y inicialización
+ee.Initialize()
+
+# Área de interés: Guaviare
+guaviare = ee.FeatureCollection("FAO/GAUL/2015/level1") \
+             .filter(ee.Filter.eq("ADM1_NAME", "Guaviare"))
+
+# Colección Landsat 8/9 con filtros
+def calcular_ndvi(imagen):
+    ndvi = imagen.normalizedDifference(["SR_B5", "SR_B4"]).rename("NDVI")
+    return imagen.addBands(ndvi)
+
+coleccion = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+    .filterBounds(guaviare.geometry())
+    .filterDate("2015-01-01", "2024-12-31")
+    .filter(ee.Filter.lt("CLOUD_COVER", 20))
+    .map(calcular_ndvi))
+
+# Exportar stack anual
+for year in range(2015, 2025):
+    img_anual = (coleccion
+        .filterDate(f"{year}-01-01", f"{year}-12-31")
+        .select("NDVI")
+        .median()
+        .clip(guaviare))
+    
+    task = ee.batch.Export.image.toDrive(
+        image=img_anual,
+        description=f"NDVI_Guaviare_{year}",
+        scale=30,
+        region=guaviare.geometry(),
+        fileFormat="GeoTIFF"
+    )
+    task.start()
+    print(f"Exportando NDVI {year}...")
+```
+
+### Fase 2: Procesamiento de series temporales (Julia) {#sec-fase2}
+
+Julia se empleará para el procesamiento computacionalmente intensivo de los stacks raster. Se implementará un pipeline de análisis de series de tiempo usando `Rasters.jl` y `ArchGDAL.jl`. El algoritmo BFAST detectará puntos de ruptura en las series de NDVI, identificando momentos y ubicaciones de cambio abrupto asociados a eventos de deforestación.
+
+**Librerías principales:**
+
+| Librería | Función |
+|---|---|
+| `Rasters.jl` | Carga y manipulación de rasters multidimensionales |
+| `ArchGDAL.jl` | Interfaz GDAL para lectura/escritura |
+| `DimensionalData.jl` | Arrays con dimensiones etiquetadas |
+| `GLM.jl` | Regresión temporal píxel a píxel |
+| `DataFrames.jl` | Procesamiento tabular |
+| `Plots.jl` | Visualización de series de tiempo |
+
+: Librerías Julia utilizadas en la Fase 2 {#tbl-julia}
+
+**Ejemplo de código — Análisis de tendencia temporal:**
+
+```julia
+using Rasters, ArchGDAL, Statistics, GLM, DataFrames
+
+# Cargar stack de NDVI (10 bandas = 10 años)
+ndvi_stack = Raster("data/NDVI_Guaviare_2015_2024.tif")
+
+años = collect(2015:2024)
+
+# Calcular pendiente de regresión lineal por píxel
+function pendiente_temporal(serie)
+    df = DataFrame(y = Float64.(serie), x = Float64.(años))
+    modelo = lm(@formula(y ~ x), df)
+    return coef(modelo)[2]  # slope
+end
+
+# Aplicar función al stack raster
+slope_map = mapslices(pendiente_temporal, ndvi_stack, dims=Band)
+
+# Guardar resultado
+write("output/slope_NDVI_Guaviare.tif", slope_map)
+println("✓ Mapa de tendencia exportado correctamente.")
+```
+
+**Productos generados:** mapas de ruptura temporal, slope maps, matrices de correlación píxel-variable.
+
+### Fase 3: Geoestadística y visualización (R) {#sec-fase3}
+
+R concentrará el análisis geoestadístico y la producción cartográfica final. Se utilizarán `terra` y `sf` para la gestión de datos espaciales, y `gstat` para el ajuste de semivariogramas y kriging ordinario.
+
+**Librerías principales:**
+
+| Librería | Función |
+|---|---|
+| `terra` / `sf` | Gestión de datos raster y vectoriales |
+| `gstat` | Semivariogramas y kriging |
+| `tmap` | Cartografía estática e interactiva |
+| `ggplot2` + `ggspatial` | Visualización y elementos cartográficos |
+| `dplyr` / `tidyr` | Manipulación de datos |
+| `rmarkdown` / `quarto` | Informe reproducible |
+
+: Librerías R utilizadas en la Fase 3 {#tbl-r}
+
+**Ejemplo de código — Semivariograma y kriging:**
+
+```r
+library(terra)
+library(sf)
+library(gstat)
+library(tmap)
+
+# Cargar raster de pendiente NDVI (desde Julia)
+slope_r <- rast("output/slope_NDVI_Guaviare.tif")
+
+# Convertir a puntos de muestreo
+puntos <- as.data.frame(slope_r, xy = TRUE, na.rm = TRUE)
+puntos_sf <- st_as_sf(puntos, coords = c("x", "y"), crs = 4326)
+
+# Ajuste de semivariograma
+vgm_emp <- variogram(slope_NDVI ~ 1, data = puntos_sf)
+vgm_fit <- fit.variogram(vgm_emp, model = vgm("Sph"))
+
+# Kriging ordinario
+grid_guaviare <- st_make_grid(puntos_sf, cellsize = 0.01)
+krige_result <- krige(slope_NDVI ~ 1, 
+                      locations = puntos_sf,
+                      newdata = grid_guaviare, 
+                      model = vgm_fit)
+
+# Visualización con tmap
+tm_shape(krige_result) +
+  tm_fill("var1.pred", 
+          palette = "-RdYlGn",
+          title = "Tendencia NDVI\n(pendiente anual)") +
+  tm_borders(alpha = 0.2) +
+  tm_scale_bar(position = c("left", "bottom")) +
+  tm_compass(position = c("right", "top")) +
+  tm_layout(title = "Degradación de cobertura vegetal\nGuaviare 2015–2024",
+            legend.outside = TRUE)
+```
+
+---
+
+## Referencias Bibliográficas {#refs}
+
+::: {#refs}
+:::
+
+```{r referencias-manuales}
+# Referencias en formato BibTeX — guardar como references.bib
+# y enlazar en el YAML con: bibliography: references.bib
+
+# @article{bullock2020,
+#   author  = {Bullock, Eric L. and Woodcock, Curtis E. and Holden, Christopher E.},
+#   title   = {Improved classification and change detection techniques for mapping
+#              tropical forest disturbance using Landsat time series},
+#   journal = {Remote Sensing of Environment},
+#   year    = {2020},
+#   volume  = {238},
+#   pages   = {111176}
+# }
+#
+# @article{cochrane2009,
+#   author  = {Cochrane, Mark A. and Barber, Christopher P.},
+#   title   = {Climate change, human land use and future fires in the Amazon},
+#   journal = {Global Change Biology},
+#   year    = {2009},
+#   volume  = {15},
+#   number  = {3},
+#   pages   = {601--612}
+# }
+#
+# @article{gorelick2017,
+#   author  = {Gorelick, Noel and Hancher, Matt and Dixon, Mike and
+#              Ilyushchenko, Simon and Thau, David and Moore, Rebecca},
+#   title   = {Google Earth Engine: Planetary-scale geospatial analysis for everyone},
+#   journal = {Remote Sensing of Environment},
+#   year    = {2017},
+#   volume  = {202},
+#   pages   = {18--27}
+# }
+#
+# @article{hansen2013,
+#   author  = {Hansen, Matthew C. and Potapov, Peter V. and Moore, Rebecca and
+#              Hancher, Matt and Turubanova, S. A. and Tyukavina, Alexandra and
+#              Thau, David and Stehman, S. V. and Goetz, Scott J. and Loveland,
+#              Thomas R. and Kommareddy, Aparna and Egorov, Alexey and Chini,
+#              Louis and Justice, Christopher O. and Townshend, John R. G.},
+#   title   = {High-resolution global maps of 21st-century forest cover change},
+#   journal = {Science},
+#   year    = {2013},
+#   volume  = {342},
+#   number  = {6160},
+#   pages   = {850--853}
+# }
+#
+# @article{nepstad2008,
+#   author  = {Nepstad, Daniel C. and Tohver, Ingrid M. and Ray, David and
+#              Moutinho, Paulo and Cardinot, Georgina},
+#   title   = {Mortality of large trees and lianas following experimental drought
+#              in an Amazon forest},
+#   journal = {Ecology},
+#   year    = {2008},
+#   volume  = {88},
+#   number  = {9},
+#   pages   = {2259--2269}
+# }
+#
+# @article{tucker1979,
+#   author  = {Tucker, Compton J.},
+#   title   = {Red and photographic infrared linear combinations for monitoring vegetation},
+#   journal = {Remote Sensing of Environment},
+#   year    = {1979},
+#   volume  = {8},
+#   number  = {2},
+#   pages   = {127--150}
+# }
+#
+# @article{escadafal1994,
+#   author  = {Escadafal, Richard},
+#   title   = {Soil spectral properties and their relationships with environmental
+#              parameters — examples from arid regions},
+#   journal = {Imaging Spectrometry — a Tool for Environmental Observations},
+#   year    = {1994},
+#   pages   = {71--87}
+# }
+#
+# @techreport{ideam2023,
+#   author      = {{IDEAM}},
+#   title       = {Boletín de Detección Temprana de Deforestación — Trimestre III 2023},
+#   institution = {Instituto de Hidrología, Meteorología y Estudios Ambientales},
+#   year        = {2023},
+#   address     = {Bogotá, Colombia}
+# }
+```
+
+
