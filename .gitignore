@@ -1,0 +1,55 @@
+# Datos pesados
+data_heavy/
+
+# Archivos temporales de QGIS
+*.qgs~
+*.qgz~
+*.qgz.backup
+*.qgs.backup
+*.qlr~
+*.tmp
+
+# Bloqueos y temporales de GeoPackage
+*.gpkg-shm
+*.gpkg-wal
+
+# Cachés de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos de Python
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Quarto / R Markdown
+.quarto/
+_freeze/
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Archivos comprimidos pesados
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# Carpetas temporales
+tmp/
+temp/
+
+# no deseados
+*.log
+*.aux
+*.txt
