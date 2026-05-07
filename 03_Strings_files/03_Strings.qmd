@@ -1,0 +1,320 @@
+---
+title: "Operaciones con cadenas de texto strings" 
+author: "Santiago Gallego"
+date: today
+format:
+  html:
+    toc: true
+    number-sections: true
+    theme: cosmo
+  pdf:
+    toc: true
+    toc-title: "Contenido"
+    number-sections: true
+    documentclass: scrreprt
+    geometry:
+      - top=25mm
+      - left=25mm 
+      - right=25mm
+      - bottom=25mm
+---
+
+## Ejercicio 1 
+
+**Contexto:** Has recibido una base de datos antigua del IGAC con los nombres de las áreas protegidas de Colombia. Los datos fueron ingresados manualmente a lo largo de los años, por lo que tienen serios problemas de formato (espacios extra, mayúsculas inconsistentes y errores de digitación). Necesitas estandarizar el nombre del Parque Nacional Natural Serranía de la Macarena para cruzarlo con el sistema actual.
+
+1. Define una variable llamada registro_crudo que contenga exactamente este texto: "   pnn  seRRania de la mACaRena   "
+
+::: {.panel-tabset}
+
+### Python
+```{python}
+registro_crudo = "   pnn  seRRania de la mACaRena   " # Define el string con espacios y mayúsculas irregulares
+```
+
+### R
+
+```{R}
+registro_crudo <- "   pnn  seRRania de la mACaRena   " # Define el string con espacios y mayúsculas irregulares
+```
+
+:::
+
+2. Utiliza el método nativo de tu lenguaje para eliminar los espacios en blanco al principio y al final del texto. Guarda el resultado en texto_sin_espacios.
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+# 1. Eliminar espacios
+texto_sin_espacios = registro_crudo.strip() # El método .strip() remueve espacios en ambos extremos
+```
+
+### R
+
+```{R}
+# 1. Eliminar espacios (trimws = trim white spaces)
+texto_sin_espacios <- trimws(registro_crudo) # La función trimws limpia los espacios en blanco
+```
+
+:::
+
+3. Convierte el texto resultante a Formato Título (donde la primera letra de cada palabra es mayúscula) y guárdalo en texto_titulo.
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+# 2. Formato Título
+texto_titulo = texto_sin_espacios.title() # Pone la primera letra de cada palabra en mayúscula y el resto en minúscula
+```
+
+### R
+
+```{R}
+# 2. Formato Título (R no tiene .title() nativo, usamos tools::toTitleCase o stringr)
+# Usando una aproximación nativa:
+texto_titulo <- tools::toTitleCase(tolower(texto_sin_espacios)) # Pasa a minúsculas y luego aplica formato título
+```
+
+:::
+
+4. El sistema oficial requiere que las siglas “PNN” estén en mayúscula sostenida. Utiliza la función de reemplazo para cambiar la subcadena “Pnn” por “PNN” dentro de tu texto_titulo. Guarda esto como registro_oficial.
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+# 3. Reemplazar siglas
+registro_oficial = texto_titulo.replace("Pnn", "PNN") # Busca "Pnn" y lo cambia por las siglas oficiales en mayúscula
+```
+
+### R
+
+```{R}
+# 3. Reemplazar siglas
+registro_oficial <- gsub("Pnn", "PNN", texto_titulo) # Función de reemplazo global para corregir las siglas PNN
+```
+
+:::
+
+
+5. Calcula la longitud (cantidad de caracteres) de tu registro_oficial.
+
+::: {.panel-tabset}
+
+### Python
+```{python}
+# 4. Longitud
+longitud = len(registro_oficial) # La función len() cuenta la cantidad total de caracteres
+```
+
+### R
+
+```{R}
+# 4. Longitud
+longitud <- nchar(registro_oficial) # La función nchar() cuenta el número de caracteres del string
+```
+
+:::
+
+6. Imprime un reporte final utilizando interpolación de cadenas que diga exactamente: "El área protegida limpia es: [AQUI_TU_VARIABLE] y su nombre tiene [AQUI_LONGITUD] caracteres."
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+# 5. Reporte con f-string
+print(f"El área protegida limpia es: {registro_oficial} y su nombre tiene {longitud} caracteres.") # Imprime usando f-string
+```
+
+### R
+
+```{R}
+# 5. Reporte con interpolación
+cat(sprintf("El área protegida limpia es: %s y su nombre tiene %d caracteres.\n", registro_oficial, longitud)) # Usa sprintf para insertar el string (%s) y el entero (%d)
+```
+
+:::
+
+## Ejercicio 2 
+**Contexto:** Un sensor sísmico ubicado en el Volcán Galeras (Nariño) envía las alertas a través de mensajes de texto planos. Tu objetivo es extraer las coordenadas de ese mensaje de texto, convertirlas a formato numérico, y ensamblar un punto espacial estándar (Well-Known Text) para insertarlo en la base de datos PostGIS del Servicio Geológico.
+
+
+1. Define la variable mensaje_sensor con el siguiente texto: "ALERTA_SISMICA:1.221,-77.359:PROFUNDIDAD_5KM"
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+mensaje_sensor = "ALERTA_SISMICA:1.221,-77.359:PROFUNDIDAD_5KM" # String de entrada con delimitadores ":" y ","
+```
+
+### R
+
+```{R}
+mensaje_sensor <- "ALERTA_SISMICA:1.221,-77.359:PROFUNDIDAD_5KM" # String de entrada con delimitadores ":" y ","
+```
+
+:::
+
+2. Utiliza la función de separación (Split) usando los dos puntos (:) como delimitador. Extrae únicamente el bloque central que contiene las coordenadas y guárdalo en la variable bloque_coords.
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+# 1 y 2. Split por ":" y extraer bloque central
+bloque_coords = mensaje_sensor.split(":")[1] # Divide por ":" y toma el segundo elemento (índice 1)
+```
+
+### R
+
+```{R}
+# 1 y 2. Split por ":" y extraer bloque central
+bloque_coords <- strsplit(mensaje_sensor, ":")[[1]][2] # Divide la cadena y extrae el segundo componente de la lista
+```
+
+:::
+
+3. Vuelve a aplicar la función de separación (Split), esta vez sobre bloque_coords, usando la coma (,) como delimitador para separar la latitud de la longitud.
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+# 3. Split por ","
+partes = bloque_coords.split(",") # Separa el bloque de coordenadas en dos partes usando la coma
+```
+
+### R
+
+```{R}
+# 3. Split por ","
+partes <- strsplit(bloque_coords, ",")[[1]] # Separa el bloque en un vector de dos elementos (Lat y Lon)
+```
+
+:::
+
+4. Las coordenadas extraídas siguen siendo texto. Conviértelas a formato numérico decimal (Float) y guárdalas en las variables latitud y longitud.
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+# 4. Convertir a Float
+latitud = float(partes[0])  # Convierte la primera parte de texto a número decimal
+longitud = float(partes[1]) # Convierte la segunda parte de texto a número decimal
+```
+
+### R
+
+```{R}
+# 4. Convertir a numérico
+latitud <- as.numeric(partes[1])  # Convierte el primer elemento del vector a numérico
+longitud <- as.numeric(partes[2]) # Convierte el segundo elemento del vector a numérico
+```
+
+:::
+
+5. La base de datos requiere una precisión estricta. Utilizando las herramientas de formateo de tu lenguaje, construye una cadena de texto en formato WKT (POINT(lon lat)) asegurando que tanto la latitud como la longitud tengan **exactamente 4 decimales**. Guarda esto en punto_wkt. (Nota: Recuerda que WKT usa el orden Longitud Latitud, separados por un espacio, no por coma).
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+# 5. Construir WKT con 4 decimales
+punto_wkt = f"POINT({longitud:.4f} {latitud:.4f})" # Crea el formato espacial fijando 4 decimales
+```
+
+### R
+
+```{R}
+# 5. Construir WKT (formatC asegura los 4 decimales)
+lon_f <- formatC(longitud, digits = 4, format = "f") # Formatea la longitud a 4 decimales fijos
+lat_f <- formatC(latitud, digits = 4, format = "f")  # Formatea la latitud a 4 decimales fijos
+punto_wkt <- paste0("POINT(", lon_f, " ", lat_f, ")") # Une las piezas para formar el texto WKT
+```
+
+:::
+
+6. El sensor reportó una anomalía térmica que afectó un área de 1250000 metros cuadrados. Formatea este número agregando un separador de miles (coma o punto) para que sea legible en el reporte final.
+
+::: {.panel-tabset}
+
+### Python
+```{python}
+# 6. Formatear área con separador de miles
+area = 1250000              # Valor numérico del área
+area_formateada = f"{area:,}" # Usa la coma como separador de miles automáticamente
+```
+
+### R
+
+```{R}
+# 6. Formatear área con separador de miles
+area <- 1250000                      # Valor numérico del área
+area_formateada <- format(area, big.mark = ",") # Aplica formato con coma para separar miles
+```
+
+:::
+
+7. Imprime el WKT generado y el área afectada formateada.
+
+::: {.panel-tabset}
+
+### Python
+```{python}
+# 7. Imprimir
+print(f"WKT: {punto_wkt}")                      # Muestra el punto en formato Well-Known Text
+print(f"Área afectada: {area_formateada} m²")  # Muestra el área con formato de lectura fácil
+```
+
+### R
+
+```{R}
+# 7. Imprimir
+cat("WKT:", punto_wkt, "\n")                   # Muestra el punto espacial procesado
+cat("Área afectada:", area_formateada, "m²\n") # Muestra el área con separadores de miles
+```
+
+:::
+
+## Pregunta
+
+1. El peligro de replace vs. strip/trimws
+Depender de .replace(" ", "") (reemplazar todos los espacios por nada) es una práctica peligrosa en bases de datos geográficas por una razón fundamental: la integridad de los nombres compuestos.
+
+Destrucción de datos: Si tienes el "Páramo de Santurbán", un replace global eliminará los espacios internos, convirtiéndolo en "PáramodeSanturbán". Esto rompe cualquier intento de normalización o búsqueda futura.
+
+Eficiencia: strip() o trimws() están optimizados para buscar solo en los extremos. replace() debe recorrer cada caracter de cada cadena en toda la base de datos, lo cual es computacionalmente costoso en datasets de millones de registros.
+
+El "espacio" no es uno solo: Las funciones dedicadas como strip() suelen manejar otros caracteres invisibles de espacio en blanco (como tabulaciones \t o saltos de línea \n), mientras que un replace(" ", "") básico solo buscará el espacio de la barra espaciadora.
+
+2. Impacto de omitir la conversión a Float en WKT
+Si se construye el WKT concatenando texto sin validar que sea numérico, se genera un error en la base de datos SIG:
+
+Inyección de Basura: Si el sensor envía un error (ej. "1.22a,-77.359"), al concatenar texto se creará un POINT(1.22a -77.359). Esto es un WKT inválido. PostGIS rechazará la inserción o, peor aún, dejará la geometría como NULL.
+
+Cálculos Imposibles: Las funciones como ST_Distance o ST_Buffer en PostGIS operan sobre binarios geométricos. Si el texto no pasó por una validación numérica, no puedes asegurar la precisión.
+
+Falta de Normalización: Al convertir a Float y formatear a 4 decimales (como se hizo en el ejercicio), se asegura que todos los puntos tengan la misma precisión. Concatenar texto crudo deja la precisión a merced de lo que el sensor decida enviar ese día.
+
+3. La anatomía del split (R vs. Python)
+Aquí es donde R muestra su naturaleza estadística y orientada a listas.
+
+En R: strsplit
+La función strsplit en R es vectorizada. Esto significa que está diseñada para recibir un vector de mil frases y devolver los cortes de todas ellas a la vez. Por ello, siempre devuelve una Lista de Listas.
+
+Incluso si se le pasa una sola frase, R te entrega una lista donde el primer elemento es el vector de palabras.
+
+Por eso se [[1]]: Para "entrar" a la primera caja de la lista y extraer el vector que realmente contiene los strings. Sin eso, se intentaría operar sobre una lista, lo cual daría un error en pasos subsiguientes.
