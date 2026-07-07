@@ -1,0 +1,271 @@
+---
+title: "Evaluación 18.7 - Fundamentos Raster"
+subtitle: "Programación SIG: Python, R y Julia"
+author: "Santiago Gallego"
+date: today
+lang: es
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-fold: true
+    self-contained: true
+  pdf:
+    toc: true
+    number-sections: true
+    geometry: margin=2.5cm
+
+execute:
+  eval: false
+  echo: true
+  warning: false
+---
+
+# Introducción
+
+El presente documento desarrolla las respuestas argumentativas correspondientes a los dos problemas planteados en la evaluación del capítulo **Fundamentos Raster**.
+
+Aunque se presentan ejemplos de código en **Python**, **R** y **Julia**, el objetivo principal es explicar los fundamentos técnicos relacionados con la administración de memoria durante la lectura de datos raster y la correcta gestión de los sistemas de referencia espacial en información geográfica.
+
+Los ejemplos de código tienen un carácter ilustrativo y muestran la forma en que las principales bibliotecas SIG implementan estos procesos.
+
+---
+
+# 1. Análisis de metadatos y gestión de memoria
+
+## Enunciado
+
+Se dispone de un Modelo Digital de Elevación (MDE) de resolución espacial de **0.5 m** que cubre la totalidad del departamento de Antioquia. El archivo ocupa aproximadamente **14 GB** en disco, mientras que la estación de trabajo disponible posee únicamente **8 GB de memoria RAM**.
+
+Explique técnicamente por qué la ejecución de funciones como `rasterio.open()` (Python), `rast()` (R) o `Raster()` (Julia) no produce un error de **Out Of Memory (OOM)**. Especifique además qué información es realmente cargada en memoria durante dicha operación.
+
+## Respuesta argumentativa
+
+El tamaño físico de un archivo raster almacenado en disco no determina la cantidad de memoria RAM utilizada durante su apertura.
+
+Las bibliotecas modernas para procesamiento de información geoespacial, como **GDAL**, **Rasterio**, **terra** y **Rasters.jl**, implementan un mecanismo conocido como **lectura diferida** (*lazy loading*). Este paradigma consiste en crear un objeto que representa el archivo raster sin cargar inmediatamente todos sus valores en memoria.
+
+Cuando se ejecuta una instrucción como `rasterio.open()`, `rast()` o `Raster()`, la biblioteca únicamente abre una conexión con el archivo y lee la información contenida en su encabezado (*header*). Los millones de valores correspondientes a las celdas del Modelo Digital de Elevación permanecen almacenados en el disco duro hasta que alguna operación requiera acceder explícitamente a ellos.
+
+Durante esta primera operación solamente se transfieren a la memoria RAM los metadatos necesarios para interpretar correctamente el raster.
+
+| Metadato | Función |
+|-----------|---------|
+| Número de filas y columnas | Define el tamaño de la matriz raster |
+| Número de bandas | Indica cuántas capas contiene el archivo |
+| Tipo de dato | Define cómo se almacenan los valores (Byte, Int16, Float32, etc.) |
+| Resolución espacial | Tamaño del píxel en las unidades del CRS |
+| Transformación afín | Relaciona filas y columnas con coordenadas geográficas |
+| Extensión espacial (Bounding Box) | Delimita el área cubierta por el raster |
+| Sistema de referencia espacial (CRS) | Define la interpretación de las coordenadas |
+| Valor NoData | Identifica las celdas sin información |
+| Información de organización interna | Permite acceder posteriormente a bloques específicos del archivo |
+
+En conjunto, estos metadatos suelen ocupar únicamente algunos kilobytes de memoria, independientemente del tamaño total del archivo. Por esta razón, abrir un raster de 14 GB consume prácticamente la misma memoria RAM que abrir uno de algunos megabytes.
+
+El consumo significativo de memoria ocurre únicamente cuando el usuario solicita los valores del raster mediante funciones como `src.read()` en Rasterio, `values()` en terra o `read()` en Rasters.jl. En ese momento la biblioteca comienza a leer datos desde el disco, ya sea por bloques (*windowed reading*) o cargando completamente la matriz, dependiendo de la operación solicitada.
+
+La lectura por bloques constituye una de las principales estrategias utilizadas para procesar archivos cuyo tamaño supera ampliamente la memoria RAM disponible, permitiendo realizar análisis espaciales sobre conjuntos de datos de gran volumen sin producir errores de tipo **Out Of Memory (OOM)**.
+
+En consecuencia, la apertura inicial del archivo no genera un error de memoria porque únicamente se cargan los metadatos necesarios para administrar el acceso al raster, mientras que la información correspondiente a cada píxel permanece almacenada en el dispositivo de almacenamiento hasta que sea requerida.
+
+## Código de referencia
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+import rasterio
+
+ruta = "data/heavy/raster/bogota.tif"
+
+with rasterio.open(ruta) as src:
+    print("Filas:", src.height)
+    print("Columnas:", src.width)
+    print("Bandas:", src.count)
+    print("Resolución:", src.res)
+    print("CRS:", src.crs)
+    print("Extensión:", src.bounds)
+```
+
+### R
+
+```{r}
+library(terra)
+
+mde <- rast("data/heavy/raster/bogota.tif")
+
+dim(mde)
+res(mde)
+crs(mde)
+ext(mde)
+```
+
+### Julia
+
+```{julia}
+using Rasters
+
+mde = Raster("data/heavy/raster/bogota.tif")
+
+dims(mde)
+crs(mde)
+```
+
+::: 
+
+---
+
+# 2. Sistemas de referencia en datos legados
+
+## Enunciado
+
+Al inspeccionar los metadatos de un mosaico de imágenes históricas suministrado por el IGAC, se identifica mediante la cadena Proj4 que el sistema de referencia espacial corresponde a un datum legado basado en **Bogotá 1941** (`+ellps=intl`).
+
+Explique la implicación metodológica de este hallazgo y describa el procedimiento obligatorio que debe realizarse antes de ejecutar una operación de intersección espacial contra una base catastral actual proyectada en **MAGNA-SIRGAS Origen Nacional (EPSG:9377)**.
+
+## Respuesta argumentativa
+
+La identificación de un sistema de referencia basado en **Datum Bogotá 1941** indica que el raster fue construido utilizando un marco de referencia geodésico diferente al empleado actualmente por la cartografía oficial colombiana.
+
+El Datum Bogotá 1941 fue durante varias décadas el sistema geodésico oficial del país y se encuentra asociado al elipsoide internacional de Hayford (`+ellps=intl`). Posteriormente, Colombia adoptó **MAGNA-SIRGAS**, un sistema geocéntrico compatible con los estándares internacionales modernos y utilizado actualmente por la infraestructura oficial de datos espaciales.
+
+Aunque ambos sistemas representan el mismo territorio, sus orígenes geodésicos son diferentes. Como consecuencia, las coordenadas de un mismo punto presentan desplazamientos sistemáticos que pueden alcanzar varios cientos de metros dependiendo de la región del país.
+
+Desde el punto de vista metodológico, esto significa que una operación espacial entre ambas capas produciría resultados incorrectos si previamente no se unifican los sistemas de referencia.
+
+Operaciones como:
+
+- Intersect
+- Clip
+- Overlay
+- Extract
+- Zonal Statistics
+
+suponen que todas las capas describen las coordenadas dentro del mismo sistema de referencia. Si esto no ocurre, las geometrías no coincidirán espacialmente aunque ambas se encuentren correctamente georreferenciadas dentro de sus respectivos datum.
+
+Por esta razón, antes de realizar cualquier análisis espacial es obligatorio reproyectar el raster hacia **MAGNA-SIRGAS Origen Nacional (EPSG:9377)**.
+
+Este procedimiento implica:
+
+1. Identificar correctamente el CRS de origen mediante sus metadatos.
+2. Aplicar la transformación geodésica correspondiente entre Datum Bogotá 1941 y MAGNA-SIRGAS utilizando las transformaciones definidas por PROJ/GDAL.
+3. Recalcular la posición de cada píxel en el nuevo sistema de referencia.
+4. Remuestrear la matriz utilizando un método apropiado para la naturaleza de la variable (por ejemplo, interpolación bilineal para datos continuos como elevación).
+5. Verificar visualmente que el raster reproyectado se alinea correctamente con la cartografía oficial.
+
+Es importante diferenciar este procedimiento de una simple reasignación del sistema de referencia.
+
+Modificar únicamente la etiqueta del CRS mediante funciones como `set_crs()`, `assign_crs()` o equivalentes no transforma las coordenadas reales del raster; únicamente cambia la descripción del archivo. Como consecuencia, las coordenadas permanecen en el datum original, produciendo desplazamientos espaciales que invalidan cualquier análisis posterior.
+
+La reproyección acompañada de la correspondiente transformación geodésica constituye, por tanto, el único procedimiento técnicamente válido para garantizar la compatibilidad espacial entre datos históricos y cartografía oficial en Colombia.
+
+## Código de referencia
+
+::: {.panel-tabset}
+
+### Python
+
+```{python}
+import rasterio
+from rasterio.warp import (
+    calculate_default_transform,
+    reproject,
+    Resampling
+)
+
+crs_destino = "EPSG:9377"
+
+with rasterio.open("data/heavy/raster/bogota.tif") as src:
+
+    transform, width, height = calculate_default_transform(
+        src.crs,
+        crs_destino,
+        src.width,
+        src.height,
+        *src.bounds
+    )
+
+    metadata = src.meta.copy()
+
+    metadata.update({
+        "crs": crs_destino,
+        "transform": transform,
+        "width": width,
+        "height": height
+    })
+
+    with rasterio.open(
+        "data/heavy/raster/bogota_magna.tif",
+        "w",
+        **metadata
+    ) as dst:
+
+        for banda in range(1, src.count + 1):
+
+            reproject(
+                source=rasterio.band(src, banda),
+                destination=rasterio.band(dst, banda),
+                src_transform=src.transform,
+                src_crs=src.crs,
+                dst_transform=transform,
+                dst_crs=crs_destino,
+                resampling=Resampling.bilinear
+            )
+```
+
+### R
+
+```{r}
+library(terra)
+
+mde <- rast("data/heavy/raster/bogota.tif")
+
+mde_magna <- project(
+    mde,
+    "EPSG:9377",
+    method = "bilinear"
+)
+
+writeRaster(
+    mde_magna,
+    "data/heavy/raster/bogota_magna.tif",
+    overwrite = TRUE
+)
+```
+
+### Julia
+
+```{julia}
+using Rasters
+
+mde = Raster("data/heavy/raster/bogota.tif")
+
+mde_magna = resample(
+    mde;
+    crs = EPSG(9377)
+)
+
+write(
+    "data/heavy/raster/bogota_magna.tif",
+    mde_magna
+)
+```
+
+:::
+
+---
+
+
+# Conclusiones
+
+El desarrollo de esta actividad permite comprender dos conceptos fundamentales del procesamiento de información raster.
+
+En primer lugar, abrir un archivo raster no implica cargar todos sus píxeles en memoria RAM. Las bibliotecas modernas implementan un modelo de lectura diferida en el que únicamente se almacenan los metadatos necesarios para administrar el acceso al archivo, permitiendo trabajar con conjuntos de datos cuyo tamaño supera ampliamente la memoria física disponible.
+
+En segundo lugar, el sistema de referencia espacial constituye un elemento esencial para garantizar la coherencia geométrica de cualquier análisis SIG. La coexistencia de información histórica en Datum Bogotá 1941 con cartografía oficial en MAGNA-SIRGAS hace indispensable realizar una reproyección acompañada de la correspondiente transformación geodésica antes de ejecutar operaciones de superposición espacial.
+
+Estos dos principios —la gestión eficiente de memoria y el manejo correcto de los sistemas de referencia— representan fundamentos esenciales para desarrollar análisis geoespaciales confiables utilizando Python, R o Julia.
